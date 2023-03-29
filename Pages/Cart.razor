@@ -1,0 +1,91 @@
+﻿@page "/cart"
+@using ORMExplained.Client.Services.CartServices;
+@inject ICartService cartService
+@inject NavigationManager navigationManager
+@inject IJSRuntime JS
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            @if (cartModel == null)
+            {
+                <span>Cart is empty</span>
+            }
+            else
+            {
+                <div class="card-header">My Cart</div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead class="bg-primary text-white fw-bold">
+                            <tr>
+                                <th>Product Image</th>
+                                <th>Product ID</th>
+                                <th>Product Name</th>
+                                <th>Product Price</th>
+                                <th>Product Quantity</th>
+                                <th>Sub Total</th>
+                                <th> Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in cartModel)
+                            {
+                                <tr>
+                                    <td><img src="@item.Image" class="card-img-top rounded-pill" style="width:150px; height:100px;" /></td>
+                                    <td>@item.ProductId</td>
+                                    <td>@item.Name</td>
+                                    <td>¢@item.Price.ToString("0.00")</td>
+                                    <td>@item.Quantity</td>
+                                    <td>¢@item.SubTotal.ToString("0.00")</td>
+                                    <td>
+                                        <button @onclick="(()=> HandleUpdate(item.ProductId))" class="btn btn-none"><span class="oi oi-pencil text-info"></span></button>
+                                        <button @onclick="(async ()=> await HandleDelete(item.ProductId, item.Name!))" class="btn btn-none"><span class="oi oi-trash text-danger"></span></button>
+                                    </td>
+                                </tr>
+                            }
+                            <tr>
+                                <td rowspan="4"> Grand Total: ¢@cartModel.Sum(x=> x.SubTotal).ToString("0.00")</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-outline-danger float-end">
+                        <span class="oi oi-cart"></span>
+                        Proceed to Checkout
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<CartModel> cartModel = new List<CartModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetCartData();
+    }
+
+    private void HandleUpdate(int id)
+    {
+        navigationManager.NavigateTo($"productDetails/{id}");
+    }
+
+    private async Task HandleDelete(int id, string name)
+    {
+        bool confirm = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete {name} ?");
+        if (confirm)
+        {
+            await cartService.RemoveCartItem(id);
+            await GetCartData();
+
+        }
+        else { return; }
+    }
+
+    private async Task GetCartData()
+    {
+        cartModel = await cartService.GetCart();
+    }
+}
